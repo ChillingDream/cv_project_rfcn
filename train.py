@@ -3,7 +3,8 @@ from trainer import Trainer
 from config import config
 from tqdm import tqdm
 from eval_voc_utils import eval_detection_voc
-
+from Pascal_VOC_dataset import Pascal_VOC_dataset
+from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 def evaluate(rfcn, dataloader, test_num=10000):
 	pred_bboxes, pred_labels, pred_scores = [], [], []
@@ -59,7 +60,20 @@ def train():
 
 
 def get_dataloader(data_name='VOC'):
-	raise NotImplementedError
+	# raise NotImplementedError
+	voc_train_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_trainval','2012_trainval']) # Remember to change the path!
+	voc_val_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit 2', dataset_list = ['2007_test'])
+	voc_test_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit 2', dataset_list = ['2012_test'])
+	train_loader = DataLoader(dataset=voc_train_dataset,
+                          batch_size=32,
+                          shuffle=True)
+	val_loader = DataLoader(dataset=voc_val_dataset,
+                          batch_size=32,
+                          shuffle=False)
+	test_loader = DataLoader(dataset=voc_test_dataset,
+                          batch_size=32,
+                          shuffle=False)
+	return train_loader, val_loader, test_loader 
 
 
 if __name__ == '__main__':
