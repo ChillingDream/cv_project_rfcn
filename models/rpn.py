@@ -36,7 +36,7 @@ class RPN(nn.Module):
 			img_size: tuple (H, W). the size of original image.
 		"""
 		batch_size = x.size(0)
-		shifted_anchors = enumerate_shifted_anchors(self.anchors, self.feat_stride,	x.size(2), x.size(3))
+		shifted_anchors = enumerate_shifted_anchors(self.anchors, self.feat_stride,	x.size(2), x.size(3)).cuda()
 
 		h = F.relu(self.conv_layer(x))
 
@@ -51,14 +51,14 @@ class RPN(nn.Module):
 		roi_indices = []
 		for i in range(batch_size):
 			roi = self.proposal_layer(
-				rpn_locs,
-				rpn_fg_scores,
+				rpn_locs[i].detach(),
+				rpn_fg_scores[i].detach(),
 				shifted_anchors,
 				img_size,
 				self.training
 			)
 			rois.append(roi)
-			roi_indices.append(i * torch.ones(len(roi), dtype=torch.int))
+			roi_indices.append(i * torch.ones(len(roi), dtype=torch.long).cuda())
 		rois = torch.cat(rois, 0)
 		roi_indices = torch.cat(roi_indices, 0)
 
@@ -91,13 +91,13 @@ class ProposalLayer:
 		n_in, n_out = (self.n_in_train, self.n_out_train) if training else (self.n_in_test, self.n_out_test)
 
 		rois = loc2bbox(anchors, locs)
-		rois[:, ::2].clamp_(0, img_size[0])
-		rois[:, 1::2].clamp_(0, img_size[1])
+		rois[:, ::2].clamp_(0, img_size[1])
+		rois[:, 1::2].clamp_(0, img_size[0])
 
 		min_size = self.min_size
-		roi_h = rois[:, 2] - rois[:, 0]
-		roi_w = rois[:, 3] - rois[:, 1]
-		keep_index = torch.where(roi_h >= min_size and roi_w >= min_size)
+		roi_w = rois[:, 2] - rois[:, 0]
+		roi_h = rois[:, 3] - rois[:, 1]
+		keep_index = torch.where((roi_h >= min_size) & (roi_w >= min_size))[0]
 		rois = rois[keep_index]
 		scores = scores[keep_index]
 
@@ -126,14 +126,14 @@ class RPNTargetGenerator:
 			bbox: (B, 4)
 			img_size: (2)
 		"""
-		target_loc = torch.zeros((len(anchors), 4))
-		target_labels = -torch.ones(len(anchors))
+		target_loc = torch.zeros((len(anchors), 4)).cuda()
+		target_labels = -torch.ones(len(anchors), dtype=torch.long).cuda()
 		inside_index = torch.where(
-				anchors[:, 0] >= 0 and
-				anchors[:, 1] >= 0 and
-				anchors[:, 2] <= img_size[0] and
-				anchors[:, 3] <= img_size[1]
-			)[0]
+			(anchors[:, 0] >= 0) &
+			(anchors[:, 1] >= 0) &
+			(anchors[:, 2] <= img_size[1]) &
+			(anchors[:, 3] <= img_size[0])
+		)[0]
 		anchors = anchors[inside_index]
 		argmax_iou_over_anchors, labels = self._generate_label(anchors, bbox)
 		loc = bbox2loc(anchors, bbox[argmax_iou_over_anchors])
@@ -143,7 +143,7 @@ class RPNTargetGenerator:
 		return target_loc, target_labels
 
 	def _generate_label(self, anchors, bbox):
-		labels = -torch.ones(len(anchors), dtype=torch.int)
+		labels = -torch.ones(len(anchors), dtype=torch.long).cuda()
 		ious = box_iou(anchors, bbox)
 		argmax_iou_over_anchors = ious.argmax(0)
 		max_iou_over_bbox, argmax_iou_over_bbox = ious.max(1)
@@ -156,13 +156,13 @@ class RPNTargetGenerator:
 		if len(pos_index) > n_pos:
 			remove_index = np.random.choice(pos_index, size=len(pos_index) - n_pos, replace=False)
 			labels[remove_index] = -1
-		n_neg = self.n_sample - (labels == 1).sum()
-		neg_index = torch.where(labels == 0)[0]
+		n_neg = self.n_sample - (labels == 1).sum().cpu().numpy()
+		neg_index = torch.where(labels == 0)[0].cpu().numpy()
 		if len(neg_index) > n_neg:
 			remove_index = np.random.choice(neg_index, size=len(neg_index) - n_neg, replace=False)
 			labels[remove_index] = -1
 
-		return argmax_iou_over_anchors, labels
+		return argmax_iou_over_bbox, labels
 
 
 class RoITargetGenerator:
@@ -178,9 +178,7 @@ class RoITargetGenerator:
 		self.iou_threshold_neg_hi = iou_threshold_neg_hi
 		self.iou_threshold_neg_lo = iou_threshold_neg_lo
 
-	def __call__(self, roi, bbox, label,
-				 loc_normalize_mean=(0., 0., 0., 0.),
-				 loc_normalize_std=(.1, .1, .2, .2)):
+	def __call__(self, roi, bbox, label, loc_normalize_mean, loc_normalize_std):
 		"""
 		Args:
 			roi: (R, 4)
@@ -190,15 +188,18 @@ class RoITargetGenerator:
 		roi = torch.cat([roi, bbox], 0)
 		ious = box_iou(roi, bbox)
 		max_iou_over_bbox, argmax_iou_over_bbox = ious.max(1)
-		gt_roi_label = label[argmax_iou_over_bbox] + 1
+		gt_roi_label = label[argmax_iou_over_bbox]
 
 		n_pos = int(self.n_samples * self.pos_ratio)
-		pos_index = torch.where(max_iou_over_bbox >= self.iou_threshold_pos)[0]
+		pos_index = torch.where(max_iou_over_bbox >= self.iou_threshold_pos)[0].cpu()
 		pos_index = np.random.choice(pos_index, size=min(n_pos, len(pos_index)), replace=False)
+		pos_index = torch.from_numpy(pos_index)
 
 		n_neg = self.n_samples - n_pos
-		neg_index = torch.where(self.iou_threshold_neg_lo <= max_iou_over_bbox < self.iou_threshold_neg_hi)[0]
+		neg_index = torch.where((self.iou_threshold_neg_lo <= max_iou_over_bbox) &
+								(max_iou_over_bbox < self.iou_threshold_neg_hi))[0].cpu()
 		neg_index = np.random.choice(neg_index, size=min(n_neg, len(neg_index)), replace=False)
+		neg_index = torch.from_numpy(neg_index)
 
 		keep_index = torch.cat([pos_index, neg_index], 0)
 		sample_roi = roi[keep_index]

@@ -13,12 +13,12 @@ class RFCN(nn.Module):
 		self.extractor = self._get_backbone(backbone)
 		if backbone == 'resnet-101':
 			self.feat_stride = 32
-			self.rpn = RPN(in_channels=512, mid_channels=512, feat_stride=self.feat_stride)
+			self.rpn = RPN(in_channels=2048, mid_channels=512, feat_stride=self.feat_stride)
 			self.RoIhead = RFCNRoIhead(2048, 1024, 3, config.num_classes, 1 / self.feat_stride)
 		else:
 			raise NotImplementedError
-		self.loc_normalize_mean = torch.tensor([0., 0., 0., 0.])
-		self.loc_normalize_std = torch.tensor([.1, .1, .2, .2])
+		self.loc_normalize_mean = torch.tensor([0., 0., 0., 0.]).cuda()
+		self.loc_normalize_std = torch.tensor([.1, .1, .2, .2]).cuda()
 		self.nms_threshold = None
 		self.score_threshold = None
 		self._set_threshold('eval')
@@ -28,9 +28,9 @@ class RFCN(nn.Module):
 		Args:
 			x: (N, C, H, W)
 		"""
-		img_size = x[2:]
+		img_size = x.size()[2:]
 		h = self.extractor(x)
-		rpn_scores, rpn_locs, rois, roi_indices = self.rpn(h, img_size)
+		rpn_scores, rpn_locs, rois, roi_indices, _ = self.rpn(h, img_size)
 		roi_scores, roi_locs = self.RoIhead(h, rois, roi_indices)
 
 		return roi_scores, roi_locs, rois, roi_indices
@@ -48,12 +48,12 @@ class RFCN(nn.Module):
 		with torch.no_grad():
 			for img in imgs:
 				img_size = img.size()[1:]
-				roi_loc, roi_score, rois, _ = self.forward(img.unsqueeze(0), scale)
+				roi_score, roi_loc, rois, _ = self.forward(img.unsqueeze(0))
 				mean, std = self.loc_normalize_mean, self.loc_normalize_std
 				roi_loc = roi_loc * std + mean
 				roi_bbox = loc2bbox(rois, roi_loc)
-				roi_bbox[:, 0::2].clamp_(0, img_size[0])
-				roi_bbox[:, 1::3].clamp_(0, img_size[1])
+				roi_bbox[:, 0::2].clamp_(0, img_size[1])
+				roi_bbox[:, 1::3].clamp_(0, img_size[0])
 				score, label = F.softmax(roi_score, dim=1).max(1)
 
 				keep_index = score > self.score_threshold
@@ -100,7 +100,7 @@ class RFCNRoIhead(nn.Module):
 		super().__init__()
 		self.bin_size = bin_size
 		self.conv1 = nn.Conv2d(in_channels, mid_channels, 1, 1, 0)
-		self.conv_cls = nn.Conv2d(mid_channels, bin_size ** 2 * (num_classes + 1), 1, 1, 0)
+		self.conv_cls = nn.Conv2d(mid_channels, bin_size ** 2 * num_classes, 1, 1, 0)
 		self.conv_loc = nn.Conv2d(mid_channels, bin_size ** 2 * 4, 1, 1, 0)
 		self.RoIpool = PSRoIPool((bin_size, bin_size), scale)
 
@@ -108,8 +108,8 @@ class RFCNRoIhead(nn.Module):
 		h = self.conv1(h)
 		h_cls = self.conv_cls(h)
 		h_reg = self.conv_loc(h)
-		indices_and_rois = torch.cat([roi_indices.unsqueeze(1), rois], 1)
-		roi_score = self.RoIpool(h_cls, indices_and_rois)
-		roi_locs = self.RoIpool(h_reg, indices_and_rois)
+		indices_and_rois = torch.cat([roi_indices.unsqueeze(1).float(), rois], 1)
+		roi_score = self.RoIpool(h_cls, indices_and_rois).mean(dim=[2, 3])
+		roi_locs = self.RoIpool(h_reg, indices_and_rois).mean(dim=[2, 3])
 		return roi_score, roi_locs
 

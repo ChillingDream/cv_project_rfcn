@@ -11,7 +11,7 @@ from torchvision import transforms as tvtsf
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 class Pascal_VOC_dataset(Dataset):
-    def __init__(self, devkit_path, min_size = 600, max_size = 1000, max_objs = 5, dataset_list = ['2007_trainval']):
+    def __init__(self, devkit_path, min_size = 400, max_size = 600, max_objs = 5, dataset_list = ['2007_trainval']):
         self._devkit_path = devkit_path
         self._data_paths = [os.path.join(self._devkit_path, 'VOC' + dataset.split('_')[0]) for dataset in dataset_list]
         self.ids = []
@@ -118,7 +118,7 @@ class Pascal_VOC_dataset(Dataset):
 
         return blob
 
-    def _preprocess(self, img, min_size=600, max_size=1000):
+    def _preprocess(self, img, min_size, max_size):
         C, H, W = img.shape
         scale1 = min_size / min(H, W)
         scale2 = max_size / max(H, W)
@@ -132,29 +132,34 @@ class Pascal_VOC_dataset(Dataset):
         img = normalize(torch.from_numpy(img))
         return img.numpy()
 
+    @staticmethod
+    def inverse_normalize(img):
+        return ((img * np.array([0.229, 0.224, 0.225]).reshape((3, 1, 1)) +
+                np.array([0.485, 0.456, 0.406]).reshape((3, 1, 1))).clip(min=0, max=1) * 255).astype(np.uint8)
+
     def _resize_bbox(self, bbox, in_size, out_size):
         bbox = bbox.copy()
         y_scale = float(out_size[0]) / in_size[0]
         x_scale = float(out_size[1]) / in_size[1]
-        bbox[:, 0] = y_scale * bbox[:, 0]
-        bbox[:, 2] = y_scale * bbox[:, 2]
-        bbox[:, 1] = x_scale * bbox[:, 1]
-        bbox[:, 3] = x_scale * bbox[:, 3]
+        bbox[:, 0] = x_scale * bbox[:, 0]
+        bbox[:, 2] = x_scale * bbox[:, 2]
+        bbox[:, 1] = y_scale * bbox[:, 1]
+        bbox[:, 3] = y_scale * bbox[:, 3]
         return bbox
 
     def _flip_bbox(self, bbox, size, y_flip=False, x_flip=False):
         H, W = size
         bbox = bbox.copy()
         if y_flip:
-            y_max = H - bbox[:, 0]
-            y_min = H - bbox[:, 2]
-            bbox[:, 0] = y_min
-            bbox[:, 2] = y_max
+            y_max = H - bbox[:, 1]
+            y_min = H - bbox[:, 3]
+            bbox[:, 1] = y_min
+            bbox[:, 3] = y_max
         if x_flip:
-            x_max = W - bbox[:, 1]
-            x_min = W - bbox[:, 3]
-            bbox[:, 1] = x_min
-            bbox[:, 3] = x_max
+            x_max = W - bbox[:, 0]
+            x_min = W - bbox[:, 2]
+            bbox[:, 0] = x_min
+            bbox[:, 2] = x_max
         return bbox
 
     def _random_flip(self, img, y_random=False, x_random=False,
@@ -215,6 +220,8 @@ class Pascal_VOC_dataset(Dataset):
         img = np.array(img).astype('float32')
         # print('img shape:', img.shape)
         img, bbox, label, scale = self._transform((img, anno['boxes'], anno['gt_classes']))
+        return img.copy(), bbox.copy(), label.astype(np.int64).copy(), scale
+
         img_padding = np.zeros((img.shape[0], self.max_size, self.max_size), dtype=np.float32)
         img_padding[:, 0:img.shape[1], 0:img.shape[2]] = img
         bbox_padding = np.zeros((self.max_objs, 4), dtype=np.float32) - 1

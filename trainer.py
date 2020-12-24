@@ -14,8 +14,8 @@ class Trainer(nn.Module):
 		self.roi_target_generator = RoITargetGenerator()
 		self.rpn_sigma = config.rpn_sigma
 		self.roi_sigma = config.roi_sigma
-		self.loc_normalize_mean = (0., 0., 0., 0.)
-		self.loc_normalize_std = (.1, .1, .2, .2)
+		self.loc_normalize_mean = nn.Parameter(torch.tensor((0., 0., 0., 0.)), False)
+		self.loc_normalize_std = nn.Parameter(torch.tensor((.1, .1, .2, .2)), False)
 		self.rpn_cm = ConfusionMeter(2)
 		self.roi_cm = ConfusionMeter(config.num_classes)
 		self.loss_avgmeter = {k: AverageValueMeter() for k in
@@ -47,7 +47,7 @@ class Trainer(nn.Module):
 		sample_roi, gt_roi_loc, gt_roi_label = self.roi_target_generator(
 			rois, bbox, label, self.loc_normalize_mean, self.loc_normalize_std
 		)
-		roi_score, roi_loc = self.rfcn.RoIhead(features, sample_roi, torch.zeros(len(sample_roi)))
+		roi_score, roi_loc = self.rfcn.RoIhead(features, sample_roi, torch.zeros(len(sample_roi), device="cuda:0"))
 
 		# RPN losses
 		gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(anchors, bboxes[0], img_size)
@@ -56,11 +56,11 @@ class Trainer(nn.Module):
 		self.rpn_cm.add(rpn_scores[gt_rpn_labels > -1].detach(), gt_rpn_labels[gt_rpn_labels > -1].detach())
 
 		# RoI losses
-		roi_loc = roi_loc.view(roi_loc.size(0), -1, 4)
-		roi_loc = roi_loc[:, gt_roi_label].contiguous()
+		#roi_loc = roi_loc.view(roi_loc.size(0), -1, 4)
+		#roi_loc = roi_loc[:, gt_roi_label].contiguous()
 		roi_loc_loss = _loc_loss(roi_loc, gt_roi_loc, gt_roi_label, self.roi_sigma)
 		roi_cls_loss = F.cross_entropy(roi_score, gt_roi_label)
-		self.roi_cm.add(roi_score.detach(), gt_roi_label)
+		self.roi_cm.add(roi_score.cpu().detach().clone(), gt_roi_label.cpu())
 
 		tot_loss = rpn_loc_loss + rpn_fg_loss + roi_loc_loss + roi_cls_loss
 		return {'rpn_loc_loss': rpn_loc_loss,
@@ -73,7 +73,7 @@ class Trainer(nn.Module):
 		self.optimizer.zero_grad()
 		losses = self.forward(imgs, bboxes, labels, scale)
 		for k, v in losses.items():
-			self.loss_avgmeter[k].add(v)
+			self.loss_avgmeter[k].add(v.cpu().detach())
 		losses['tot_loss'].backward()
 		self.optimizer.step()
 		return losses
@@ -88,7 +88,7 @@ class Trainer(nn.Module):
 		self.roi_cm.reset()
 
 	def get_meter(self):
-		return {(k, v) for k, v in self.loss_avgmeter.items()}
+		return {k: v.value()[0] for k, v in self.loss_avgmeter.items()}
 
 	def _get_optimizer(self, config):
 		lr = config.lr
@@ -105,10 +105,10 @@ class Trainer(nn.Module):
 def _smooth_l1_loss(x, t, weight, sigma):
 	sigma2 = sigma ** 2
 	diff = ((x - t) * weight).abs()
-	smooth = diff < 1 / sigma2
+	smooth = (diff < 1 / sigma2).float()
 	loss = smooth * sigma2 * diff ** 2 / 2 + (1 - smooth) * (diff - 0.5 / sigma2)
 	return loss.sum()
 
 
 def _loc_loss(locs, gt_locs, gt_labels, sigma):
-	return _smooth_l1_loss(locs, gt_locs, gt_labels, sigma) / len(gt_labels)
+	return _smooth_l1_loss(locs, gt_locs, (gt_labels == 1).float().unsqueeze(1), sigma) / (gt_labels >= 0).sum()

@@ -6,16 +6,16 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 voc_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_trainval','2012_trainval'])
 for i in range(10):
     img, bbox, label, scale = voc_dataset[i]
-    print(img)
+    #print(img)
     print(bbox)
     print(label)
     print(scale)
 
 train_loader = DataLoader(dataset=voc_dataset,
-                          batch_size=32,
+                          batch_size=1,
                           shuffle=True)
 
 for i, data in enumerate(train_loader):
-    if i == 5:
+    if i == 100:
         break
-    print(data)
+    #print(data)
