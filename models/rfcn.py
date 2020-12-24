@@ -108,7 +108,8 @@ class RFCNRoIhead(nn.Module):
 		h = self.conv1(h)
 		h_cls = self.conv_cls(h)
 		h_reg = self.conv_loc(h)
-		indices_and_rois = torch.cat([roi_indices.unsqueeze(1).float(), rois], 1)
+		roi_indices = roi_indices.unsqueeze(1).float()
+		indices_and_rois = torch.cat([roi_indices, rois], 1).float()
 		roi_score = self.RoIpool(h_cls, indices_and_rois).mean(dim=[2, 3])
 		roi_locs = self.RoIpool(h_reg, indices_and_rois).mean(dim=[2, 3])
 		return roi_score, roi_locs

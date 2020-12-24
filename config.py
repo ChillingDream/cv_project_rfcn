@@ -1,12 +1,11 @@
 import torch
 
-
 class Config:
 	device = torch.device('cuda:0')
 	load_path = None
-	save_path = './'
+	save_path = 'checkpoint.pt'
 
-	num_classes = 21
+	num_classes = 2
 
 	rpn_sigma = 3.
 	roi_sigma = 1.
@@ -14,9 +13,9 @@ class Config:
 	batch_size = 1
 	lr = 0.001
 	weight_decay = 0.1
-	epoch = 10
+	epoch = 20
 
-	eval_iters = 1
+	eval_iters = 200
 
 
 config = Config()

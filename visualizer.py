@@ -17,9 +17,7 @@ def fig2visdom(fig):
 	buf = np.roll(buf, 3, axis=2)
 	buf = buf.reshape((h, w, 4))
 	plt.close()
-	tmp = buf[:, :, :3].transpose((2, 0, 1)) / 255
-	print(tmp.mean())
-	return tmp
+	return buf[:, :, :3].transpose((2, 0, 1)) / 255
 
 
 def vis_image(img, ax=None):

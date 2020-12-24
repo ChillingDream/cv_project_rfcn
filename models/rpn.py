@@ -17,7 +17,7 @@ class RPN(nn.Module):
 		feat_stride: (int). stride size after extractor.
 	"""
 
-	def __init__(self, in_channels, mid_channels, ratios=(0.5, 1, 2), anchor_scales=(8, 16, 32), feat_stride=16):
+	def __init__(self, in_channels, mid_channels, ratios=(0.5, 1, 2), anchor_scales=(8, 16, 32), feat_stride=32):
 		super().__init__()
 		self.anchors = generator_anchor(16, ratios, anchor_scales)
 		self.feat_stride = feat_stride

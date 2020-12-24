@@ -3,6 +3,7 @@ from __future__ import division
 from collections import defaultdict
 import itertools
 import numpy as np
+import torch
 
 from torchvision.ops import box_iou
 
@@ -34,24 +35,24 @@ def eval_detection_voc(pred_bboxes, pred_labels, pred_scores, gt_bboxes, gt_labe
 
 
 def calc_detection_voc_prec_rec(pred_bboxes, pred_labels, pred_scores, gt_bboxes, gt_labels,
-                                gt_difficulties=None, iou_thresh=0.5):
+                                gt_difficults=None, iou_thresh=0.5):
 
     pred_bboxes = iter(pred_bboxes)
     pred_labels = iter(pred_labels)
     pred_scores = iter(pred_scores)
     gt_bboxes = iter(gt_bboxes)
     gt_labels = iter(gt_labels)
-    if gt_difficulties is None:
-        gt_difficulties = itertools.repeat(None)
+    if gt_difficults is None:
+        gt_difficults = itertools.repeat(None)
     else:
-        gt_difficulties = iter(gt_difficulties)
+        gt_difficults = iter(gt_difficults)
 
     n_pos = defaultdict(int)
     score = defaultdict(list)
     match = defaultdict(list)
 
     for pred_bbox, pred_label, pred_score, gt_bbox, gt_label, gt_difficult in zip(
-            pred_bboxes, pred_labels, pred_scores, gt_bboxes, gt_labels, gt_difficulties):
+            pred_bboxes, pred_labels, pred_scores, gt_bboxes, gt_labels, gt_difficults):
         if gt_difficult is None:
             gt_difficult = np.zeros(gt_bbox.shape[0], dtype=bool)
 
@@ -83,7 +84,7 @@ def calc_detection_voc_prec_rec(pred_bboxes, pred_labels, pred_scores, gt_bboxes
             gt_bbox_l = gt_bbox_l.copy()
             gt_bbox_l[:, 2:] += 1
 
-            iou = box_iou(pred_bbox_l, gt_bbox_l)
+            iou = box_iou(torch.tensor(pred_bbox_l), torch.tensor(gt_bbox_l)).numpy()
             gt_index = iou.argmax(axis=1)
             # set -1 if there is no matching ground truth
             gt_index[iou.max(axis=1) < iou_thresh] = -1
@@ -103,7 +104,7 @@ def calc_detection_voc_prec_rec(pred_bboxes, pred_labels, pred_scores, gt_bboxes
                 else:
                     match[l].append(0)
 
-    for iter_ in (pred_bboxes, pred_labels, pred_scores, gt_bboxes, gt_labels, gt_difficulties):
+    for iter_ in (pred_bboxes, pred_labels, pred_scores, gt_bboxes, gt_labels, gt_difficults):
         if next(iter_, None) is not None:
             raise ValueError('Length of input iterables need to be same.')
 

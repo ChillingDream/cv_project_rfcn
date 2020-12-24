@@ -3,8 +3,8 @@ import numpy as np
 from Pascal_VOC_dataset import Pascal_VOC_dataset
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
-voc_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_trainval','2012_trainval'])
-for i in range(10):
+voc_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_trainval','2012_trainval'], load_all=True)
+for i in range(0):
     img, bbox, label, scale = voc_dataset[i]
     #print(img)
     print(bbox)
@@ -16,6 +16,6 @@ train_loader = DataLoader(dataset=voc_dataset,
                           shuffle=True)
 
 for i, data in enumerate(train_loader):
-    if i == 100:
+    if i == 1000:
         break
-    #print(data)
+    print(len(data[2]))

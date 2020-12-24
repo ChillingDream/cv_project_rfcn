@@ -79,7 +79,7 @@ class Trainer(nn.Module):
 		return losses
 
 	def save(self, save_path):
-		torch.save({'model', self.rfcn.state_dict()}, save_path)
+		torch.save({'model': self.rfcn.state_dict()}, save_path)
 
 	def reset_meters(self):
 		for meter in self.loss_avgmeter.values():
