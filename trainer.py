@@ -19,9 +19,9 @@ class Trainer(nn.Module):
 		self.rpn_cm = ConfusionMeter(2)
 		self.roi_cm = ConfusionMeter(config.num_classes)
 		self.loss_avgmeter = {k: AverageValueMeter() for k in
-							  ['rpn_loc_loss', 'rpn_fg_loss', 'roi_loc_loss', 'roi_cls_loss', 'tot_loss']}
+							  ['rpn_loc_loss', 'rpn_fg_loss', 'roi_loc_loss', 'roi_cls_loss', 'total_loss']}
 		self.optimizer = self._get_optimizer(config)
-		self.vis = Visualizer()
+		self.vis = Visualizer(env=config.exp_name)
 		self.train()
 
 	def forward(self, imgs, bboxes, labels, scale):
@@ -47,39 +47,47 @@ class Trainer(nn.Module):
 		sample_roi, gt_roi_loc, gt_roi_label = self.roi_target_generator(
 			rois, bbox, label, self.loc_normalize_mean, self.loc_normalize_std
 		)
-		roi_score, roi_loc = self.rfcn.RoIhead(features, sample_roi, torch.zeros(len(sample_roi), device="cuda:0"))
+		roi_score, roi_loc = self.rfcn.roi_head(features, sample_roi, torch.zeros(len(sample_roi), device="cuda:0"))
 
 		# RPN losses
-		gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(anchors, bboxes[0], img_size)
+		gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(anchors, bboxes[0], img_size, self.vis)
 		rpn_loc_loss = _loc_loss(rpn_locs, gt_rpn_locs, gt_rpn_labels, self.rpn_sigma)
 		rpn_fg_loss = F.cross_entropy(rpn_scores, gt_rpn_labels, ignore_index=-1)
 		self.rpn_cm.add(rpn_scores[gt_rpn_labels > -1].detach(), gt_rpn_labels[gt_rpn_labels > -1].detach())
 
 		# RoI losses
-		#roi_loc = roi_loc.view(roi_loc.size(0), -1, 4)
-		#roi_loc = roi_loc[:, gt_roi_label].contiguous()
+		n_smaple = roi_loc.size(0)
+		roi_loc = roi_loc.view(n_smaple, -1, 4)
+		roi_loc = roi_loc[torch.arange(n_smaple), gt_roi_label].contiguous()
 		roi_loc_loss = _loc_loss(roi_loc, gt_roi_loc, gt_roi_label, self.roi_sigma)
 		roi_cls_loss = F.cross_entropy(roi_score, gt_roi_label)
 		self.roi_cm.add(roi_score.cpu().detach().clone(), gt_roi_label.cpu())
 
-		tot_loss = rpn_loc_loss + rpn_fg_loss + roi_loc_loss + roi_cls_loss
+		total_loss = rpn_loc_loss + rpn_fg_loss + roi_loc_loss + roi_cls_loss
+		#total_loss = rpn_loc_loss + rpn_fg_loss
 		return {'rpn_loc_loss': rpn_loc_loss,
 				'rpn_fg_loss': rpn_fg_loss,
 				'roi_loc_loss': roi_loc_loss,
 				'roi_cls_loss': roi_cls_loss,
-				'tot_loss': tot_loss}
+				'total_loss': total_loss}
 
 	def train_step(self, imgs, bboxes, labels, scale):
 		self.optimizer.zero_grad()
 		losses = self.forward(imgs, bboxes, labels, scale)
 		for k, v in losses.items():
 			self.loss_avgmeter[k].add(v.cpu().detach())
-		losses['tot_loss'].backward()
+		losses['total_loss'].backward()
 		self.optimizer.step()
 		return losses
 
 	def save(self, save_path):
-		torch.save({'model': self.rfcn.state_dict()}, save_path)
+		torch.save({'model': self.rfcn.state_dict(),
+					'optimizer': self.optimizer.state_dict()}, save_path)
+
+	def load(self, save_path):
+		checkpoint = torch.load(save_path)
+		self.rfcn.load_state_dict(checkpoint['model'])
+		self.optimizer.load_state_dict(checkpoint['optimizer'])
 
 	def reset_meters(self):
 		for meter in self.loss_avgmeter.values():
@@ -99,7 +107,13 @@ class Trainer(nn.Module):
 					params += [{'params': [value], 'lr': lr * 2, 'weight_decay': 0}]
 				else:
 					params += [{'params': [value], 'lr': lr, 'weight_decay': config.weight_decay}]
-		return torch.optim.Adam(params)
+		if config.optimizer == 'adam':
+			opt = torch.optim.Adam(params)
+		elif config.optimizer == 'sgd':
+			opt = torch.optim.SGD(params, momentum=0.9)
+		else:
+			raise ValueError("optimizer should either be adam or sgd")
+		return opt
 
 
 def _smooth_l1_loss(x, t, weight, sigma):
@@ -111,4 +125,4 @@ def _smooth_l1_loss(x, t, weight, sigma):
 
 
 def _loc_loss(locs, gt_locs, gt_labels, sigma):
-	return _smooth_l1_loss(locs, gt_locs, (gt_labels == 1).float().unsqueeze(1), sigma) / (gt_labels >= 0).sum()
+	return _smooth_l1_loss(locs, gt_locs, (gt_labels > 0).float().unsqueeze(1), sigma) / (gt_labels >= 0).sum().float()
