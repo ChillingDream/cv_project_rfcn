@@ -115,6 +115,10 @@ class Trainer(nn.Module):
 			raise ValueError("optimizer should either be adam or sgd")
 		return opt
 
+	def scale_lr(self, decay=0.1):
+		for param_group in self.optimizer.param_groups:
+			param_group['lr'] *= decay
+
 
 def _smooth_l1_loss(x, t, weight, sigma):
 	sigma2 = sigma ** 2

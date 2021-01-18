@@ -1,15 +1,15 @@
 import os
-import cv2
-import torch
-import scipy
 import random
-import numpy as np
-from PIL import Image
 import xml.etree.ElementTree as ET
+
+import cv2
+import numpy as np
+import torch
+from PIL import Image
 from skimage import transform as sktsf
+from torch.utils.data import Dataset
 from torchvision import transforms as tvtsf
-from torch.utils.data import Dataset, DataLoader, TensorDataset
-from tqdm import trange
+
 
 class Pascal_VOC_dataset(Dataset):
 	def __init__(self, devkit_path, dataset_list=None, min_size=600, max_size=1000, use_diff=False, max_objs=5):
@@ -203,6 +203,7 @@ class Pascal_VOC_dataset(Dataset):
 
 	def _transform(self, in_data):
 		img, bbox, label = in_data
+		img, bbox, scale = self._preprocess(img, self.min_size, self.max_size, bbox)
 		_, o_H, o_W = img.shape
 
 		# horizontally flip
@@ -211,7 +212,7 @@ class Pascal_VOC_dataset(Dataset):
 		bbox = self._flip_bbox(
 			bbox, (o_H, o_W), x_flip=params['x_flip'])
 
-		return img, bbox, label
+		return img, bbox, label, scale
 
 	def __getitem__(self, i):
 		anno = self._load_pascal_annotation(self.ids[i])

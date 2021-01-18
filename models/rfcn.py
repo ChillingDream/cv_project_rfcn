@@ -3,9 +3,10 @@ from torch import nn
 from torch.nn import functional as F
 from torchvision.models import vgg16
 from torchvision.models.resnet import resnet101
-from .rpn import RPN
 from torchvision.ops import PSRoIPool, nms, RoIPool
+
 from utils import loc2bbox
+from .rpn import RPN
 
 
 class RFCN(nn.Module):

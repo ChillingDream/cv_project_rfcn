@@ -1,9 +1,10 @@
-import torch
 import numpy as np
-from torch.nn import functional as F
+import torch
 from torch import nn
-from utils import generator_anchor, enumerate_shifted_anchors, loc2bbox, bbox2loc
+from torch.nn import functional as F
 from torchvision.ops import nms, box_iou
+
+from utils import generator_anchor, enumerate_shifted_anchors, loc2bbox, bbox2loc
 
 
 class RPN(nn.Module):

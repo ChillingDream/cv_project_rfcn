@@ -13,8 +13,9 @@ class Config:
 
 	optimizer = 'sgd'
 	batch_size = 1
-	lr = 0.001
-	weight_decay = 0.1
+	lr = 1e-3
+	lr_decay = 0.1
+	weight_decay = 5e-4
 	epoch = 20
 
 	eval_iters = 100
