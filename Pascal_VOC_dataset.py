@@ -12,7 +12,7 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 from tqdm import trange
 
 class Pascal_VOC_dataset(Dataset):
-	def __init__(self, devkit_path, dataset_list=None, min_size=600, max_size=1000, use_diff=False, max_objs=5, load_all=False):
+	def __init__(self, devkit_path, dataset_list=None, min_size=600, max_size=1000, use_diff=False, max_objs=5):
 		self._devkit_path = devkit_path
 		self._data_paths = [os.path.join(self._devkit_path, 'VOC' + dataset.split('_')[0]) for dataset in dataset_list]
 		self.use_diff = use_diff
@@ -36,13 +36,8 @@ class Pascal_VOC_dataset(Dataset):
 		self.min_size = min_size
 		self.max_size = max_size
 		self.max_objs = max_objs
-		if load_all:
-			self._load_all_data()
-		self.load_all = load_all
 
 	def __len__(self):
-		if self.load_all:
-			return len(self._dataset)
 		return len(self.ids)
 
 	def _load_pascal_annotation(self, Annotations_file, min_box_size=32):
@@ -207,13 +202,8 @@ class Pascal_VOC_dataset(Dataset):
 			return img
 
 	def _transform(self, in_data):
-		if not self.load_all:
-			img, bbox, label = in_data
-			img, bbox, scale = self._preprocess(img, self.min_size, self.max_size, bbox)
-			_, o_H, o_W = img.shape
-		else:
-			img, bbox, label = in_data
-			_, o_H, o_W = img.shape
+		img, bbox, label = in_data
+		_, o_H, o_W = img.shape
 
 		# horizontally flip
 		img, params = self._random_flip(
@@ -221,48 +211,17 @@ class Pascal_VOC_dataset(Dataset):
 		bbox = self._flip_bbox(
 			bbox, (o_H, o_W), x_flip=params['x_flip'])
 
-		if not self.load_all:
-			return img, bbox, label, scale
-		else:
-			return img, bbox, label
-
-	def _load_all_data(self):
-		self._dataset = []
-		for i in trange(len(self.ids)):
-			anno = self._load_pascal_annotation(self.ids[i])
-			if not anno:
-				continue
-			if not len(anno['boxes']):
-				continue
-			f = Image.open(self.images[i])
-			try:
-				img = f.convert('RGB')
-				img = np.asarray(img, dtype=np.float32)
-				img, bbox, scale = self._preprocess(
-					img, self.min_size, self.max_size, anno['boxes'],
-					flipped=anno['flipped']
-				)
-				anno['boxes'] = bbox
-			finally:
-				if hasattr(f, 'close'):
-					f.close()
-			self._dataset.append((anno, img, scale))
+		return img, bbox, label
 
 	def __getitem__(self, i):
-		if self.load_all:
-			anno, img, scale = self._dataset[i]
-		else:
-			anno = self._load_pascal_annotation(self.ids[i])
-			f = Image.open(self.images[i])
-			try:
-				img = f.convert('RGB')
-				img = np.asarray(img, dtype=np.float32)
-			finally:
-				if hasattr(f, 'close'):
-					f.close()
+		anno = self._load_pascal_annotation(self.ids[i])
+		f = Image.open(self.images[i])
+		try:
+			img = f.convert('RGB')
+			img = np.asarray(img, dtype=np.float32)
+		finally:
+			if hasattr(f, 'close'):
+				f.close()
 
-		if self.load_all:
-			img, bbox, label = self._transform((img, anno['boxes'], anno['gt_classes']))
-		else:
-			img, bbox, label, scale = self._transform((img, anno['boxes'], anno['gt_classes']))
+		img, bbox, label, scale = self._transform((img, anno['boxes'], anno['gt_classes']))
 		return img.copy(), bbox.copy(), label.astype(np.int64).copy(), scale, anno['gt_ishard']
