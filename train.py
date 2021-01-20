@@ -9,6 +9,7 @@ from trainer import Trainer
 from config import config
 from eval_voc_utils import eval_detection_voc
 from Pascal_VOC_dataset import Pascal_VOC_dataset
+from BDD10K_dataset import BDD10K_dataset
 from torch.utils.data import DataLoader
 
 
@@ -34,8 +35,9 @@ def evaluate(rfcn, dataloader, test_num=10000):
 
 
 def train():
+	dataset = 'BDD'
 	print('loading data.')
-	train_data, val_data = get_dataloader('VOC')
+	train_data, val_data = get_dataloader(dataset)
 	print('building model.')
 	rfcn = RFCN(config, backbone='vgg16', head='rcnn')
 	trainer = Trainer(rfcn, config).cuda()
@@ -45,7 +47,10 @@ def train():
 	for epoch in range(config.epoch):
 		trainer.reset_meters()
 		for iters, batch in enumerate(tqdm(train_data)):
-			imgs, bboxes, labels, scale, difficults = map(lambda x: x.to(config.device), batch)
+			if dataset == 'BDD':
+				imgs, bboxes, labels, scale = map(lambda x: x.to(config.device), batch)
+			else:
+				imgs, bboxes, labels, scale, difficults = map(lambda x: x.to(config.device), batch)
 			trainer.train_step(imgs, bboxes, labels, scale)
 			if (iters + 1) % config.eval_iters == 0:
 				trainer.vis.multi_plot(trainer.get_meter())
@@ -73,14 +78,16 @@ def train():
 	print('training done')
 
 
-def get_dataloader(data_name='VOC'):
+def get_dataloader(data_name='BDD'):
 	# raise NotImplementedError
-	voc_train_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_trainval']) # Remember to change the path!
-	voc_val_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_test'])
-	#voc_test_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_test'], load_all=True)
-	train_loader = DataLoader(dataset=voc_train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=8)
-	val_loader = DataLoader(dataset=voc_val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=8, pin_memory=True)
-	#test_loader = DataLoader(dataset=voc_test_dataset, batch_size=config.batch_size, shuffle=False)
+	if data_name == 'VOC':
+		train_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_trainval']) # Remember to change the path!
+		val_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_test'])
+	elif data_name == 'BDD':
+		train_dataset = BDD10K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd10k_train.pkl') # Remember to change the path!
+		val_dataset = BDD10K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd10k_val.pkl') # Remember to change the path!
+	train_loader = DataLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=8)
+	val_loader = DataLoader(dataset=val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=8, pin_memory=True)
 	return train_loader, val_loader
 
 
