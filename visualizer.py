@@ -47,7 +47,7 @@ def vis_bbox(img, bboxes, label=None, score=None, ax=None):
 
 class Visualizer:
 	def __init__(self, env='default'):
-		self.vis = visdom.Visdom('localhost', env=env, use_incoming_socket=False, port=9908)
+		self.vis = visdom.Visdom('localhost', env=env, use_incoming_socket=False, port=8097)
 		self.index = {}
 
 	def plot(self, name, y, **kwargs):

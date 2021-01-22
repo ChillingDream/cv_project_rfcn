@@ -66,6 +66,12 @@ def calc_detection_voc_prec_rec(pred_bboxes, pred_labels, pred_scores, gt_bboxes
             pred_score_l = pred_score_l[order]
 
             gt_mask_l = gt_label == l
+
+            # print('---------------')
+            # print(type(gt_label))
+            # print(gt_label.size)
+            # print(gt_bbox.size)
+
             gt_bbox_l = gt_bbox[gt_mask_l]
             gt_difficult_l = gt_difficult[gt_mask_l]
 

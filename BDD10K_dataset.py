@@ -42,9 +42,11 @@ class BDD10K_dataset(Dataset):
                 print('wrong! bdd10k_path missing')
                 exit(0)
             self._dataset = []
-            self._bdd100k_path = bdd100k_path
-            self._labels_paths = [os.path.join(self._bdd100k_path, 'labels', 'bdd100k_labels_images_%s.json' % dataset) for dataset in dataset_list]
+            self._bdd100k_path = bdd10k_path
+            # self._labels_paths = [os.path.join(self._bdd100k_path, 'labels', 'bdd100k_labels_images_%s.json' % dataset) for dataset in dataset_list]
+            self._labels_paths = [os.path.join(self._bdd100k_path, 'labels', 'bdd100k_labels_images_%s.json' % 'train')]
             self._images_paths = [os.path.join(self._bdd100k_path, 'images', '10k', dataset) for dataset in dataset_list]
+            # self._images_paths = [os.path.join(self._bdd100k_path, 'images', '10k', 'train') ]
             # print(self._images_paths)
             # self.annos = dict((dataset_list[ind] ,self._load_BDD100K_annotation(label_path)) for ind, label_path in enumerate(self._labels_paths))
             self._load_all_data()
@@ -56,7 +58,7 @@ class BDD10K_dataset(Dataset):
     def __len__(self):
         return len(self._dataset)
 
-    def _load_BDD100K_annotation(self, Annotations_file, min_box_size=16):   
+    def _load_BDD100K_annotation(self, Annotations_file, min_box_size=32):   
         filename = Annotations_file
         # print(filename)
         if not os.path.exists(filename):
@@ -75,7 +77,7 @@ class BDD10K_dataset(Dataset):
                     continue
                 # print('obj find!!!')
                 cls = self._class_to_ind[obj['category'].lower().strip()]
-                gt_classes.append(cls)
+                
                 x1 = float(obj["box2d"]["x1"]) - 1
                 y1 = float(obj["box2d"]["y1"]) - 1
                 x2 = float(obj["box2d"]["x2"]) - 1
@@ -83,6 +85,7 @@ class BDD10K_dataset(Dataset):
                 if min_box_size > 0 and np.abs(x1 - x2) * np.abs(y1 - y2) < min_box_size:
                     continue
                 boxes.append([x1, y1, x2, y2])
+                gt_classes.append(cls)
                 if self.max_objs > 0 and len(boxes) >= self.max_objs:
                     break
             if not boxes or not gt_classes:
@@ -226,7 +229,7 @@ class BDD10K_dataset(Dataset):
                 image_file = os.path.join(images_path, anno['name'])
                 if not os.path.exists(image_file):
                     continue
-                # print('find image!')
+                print('find image!')
                 f = Image.open(image_file)
                 try:
                     img = f.convert('RGB')

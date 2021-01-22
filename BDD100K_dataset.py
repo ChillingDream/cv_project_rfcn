@@ -56,7 +56,7 @@ class BDD100K_dataset(Dataset):
     def __len__(self):
         return len(self._dataset)
 
-    def _load_BDD100K_annotation(self, Annotations_file, min_box_size=16):   
+    def _load_BDD100K_annotation(self, Annotations_file, min_box_size=32):   
         filename = Annotations_file
         # print(filename)
         if not os.path.exists(filename):
@@ -75,7 +75,6 @@ class BDD100K_dataset(Dataset):
                     continue
                 # print('obj find!!!')
                 cls = self._class_to_ind[obj['category'].lower().strip()]
-                gt_classes.append(cls)
                 x1 = float(obj["box2d"]["x1"]) - 1
                 y1 = float(obj["box2d"]["y1"]) - 1
                 x2 = float(obj["box2d"]["x2"]) - 1
@@ -83,6 +82,7 @@ class BDD100K_dataset(Dataset):
                 if min_box_size > 0 and np.abs(x1 - x2) * np.abs(y1 - y2) < min_box_size:
                     continue
                 boxes.append([x1, y1, x2, y2])
+                gt_classes.append(cls)
                 if self.max_objs > 0 and len(boxes) >= self.max_objs:
                     break
             if not boxes or not gt_classes:
@@ -219,6 +219,7 @@ class BDD100K_dataset(Dataset):
             print('loading annos...')
             annos = self._load_BDD100K_annotation(label_path)
             images_path = self._images_paths[ind]
+            image_cnt = 0
             for anno in tqdm(annos):
                 if not anno:
                     continue
@@ -227,6 +228,9 @@ class BDD100K_dataset(Dataset):
                 if not os.path.exists(image_file):
                     continue
                 # print('find image!')
+                image_cnt += 1
+                if image_cnt % 5 != 0:
+                    continue
                 f = Image.open(image_file)
                 try:
                     img = f.convert('RGB')

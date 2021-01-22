@@ -33,9 +33,30 @@ def evaluate(rfcn, dataloader, test_num=10000):
 		use_07_metric=False
 	)
 
+def evaluate_BDD(rfcn, dataloader, test_num=10000):
+	pred_bboxes, pred_labels, pred_scores = [], [], []
+	gt_bboxes, gt_labels = [], []
+	for i, (imgs, bboxes, labels, scale) in enumerate(tqdm(dataloader)):
+		# if i== 10:
+		# 	break
+		gt_bboxes += list(bboxes.numpy())
+		gt_labels += list(labels.numpy())
+		# gt_difficults += list(difficults.numpy())
+		bboxes, labels, scores = rfcn.predict(imgs.to(config.device))
+		pred_bboxes += [bboxes.cpu().numpy()]
+		pred_labels += [labels.cpu().numpy()]
+		pred_scores += [scores.cpu().numpy()]
+		if i == test_num - 1:
+			break
+	# print(gt_labels)
+	# print(gt_labels.size())
+	return eval_detection_voc(
+		pred_bboxes, pred_labels, pred_scores,
+		gt_bboxes, gt_labels,
+		use_07_metric=False
+	)
 
-def train():
-	dataset = 'BDD'
+def train(dataset = 'BDD'):
 	print('loading data.')
 	train_data, val_data = get_dataloader(dataset)
 	print('building model.')
@@ -52,6 +73,8 @@ def train():
 			else:
 				imgs, bboxes, labels, scale, difficults = map(lambda x: x.to(config.device), batch)
 			trainer.train_step(imgs, bboxes, labels, scale)
+			# if iters == 20:
+			# 	break
 			if (iters + 1) % config.eval_iters == 0:
 				trainer.vis.multi_plot(trainer.get_meter())
 
@@ -62,8 +85,10 @@ def train():
 				trainer.vis.show_image_bbox('pred_img', img, *map(lambda x: x.cpu().numpy(), [bboxes, labels, scores]))
 				trainer.vis.text(str(trainer.rpn_cm.value().tolist()), 'rpn_cm')
 				trainer.vis.show_image('roi_cm', np.array(trainer.roi_cm.conf, dtype=np.float))
-
-		eval_result = evaluate(trainer.rfcn, val_data)
+		if dataset == 'BDD':
+			eval_result = evaluate_BDD(trainer.rfcn, val_data)
+		else:
+			eval_result = evaluate(trainer.rfcn, val_data)
 		trainer.vis.plot('val_map', eval_result['map'])
 
 		if eval_result['map'] > best_map:
@@ -84,8 +109,8 @@ def get_dataloader(data_name='BDD'):
 		train_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_trainval']) # Remember to change the path!
 		val_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_test'])
 	elif data_name == 'BDD':
-		train_dataset = BDD10K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd10k_train.pkl') # Remember to change the path!
-		val_dataset = BDD10K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd10k_val.pkl') # Remember to change the path!
+		train_dataset = BDD10K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd100k_small_train.pkl') # Remember to change the path!
+		val_dataset = BDD10K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd100k_small_val.pkl') # Remember to change the path!
 	train_loader = DataLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=8)
 	val_loader = DataLoader(dataset=val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=8, pin_memory=True)
 	return train_loader, val_loader

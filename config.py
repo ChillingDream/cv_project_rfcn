@@ -1,7 +1,8 @@
 import torch
 
 class Config:
-	exp_name = 'default'
+	# exp_name = 'default'
+	exp_name = 'BDD100K'
 	device = torch.device('cuda:0')
 	load_path = None
 	save_path = exp_name + '.pt'
