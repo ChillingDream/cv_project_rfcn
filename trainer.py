@@ -14,6 +14,7 @@ class Trainer(nn.Module):
 		self.roi_target_generator = RoITargetGenerator()
 		self.rpn_sigma = config.rpn_sigma
 		self.roi_sigma = config.roi_sigma
+		self.loc_loss_lambda = config.loc_loss_lambda
 		self.loc_normalize_mean = nn.Parameter(torch.tensor((0., 0., 0., 0.)), False)
 		self.loc_normalize_std = nn.Parameter(torch.tensor((.1, .1, .2, .2)), False)
 		self.rpn_cm = ConfusionMeter(2)
@@ -51,20 +52,20 @@ class Trainer(nn.Module):
 
 		# RPN losses
 		gt_rpn_locs, gt_rpn_labels = self.rpn_target_generator(anchors, bboxes[0], img_size, self.vis)
-		rpn_loc_loss = _loc_loss(rpn_locs, gt_rpn_locs, gt_rpn_labels, self.rpn_sigma)
+		rpn_loc_loss = _loc_loss(rpn_locs, gt_rpn_locs, gt_rpn_labels, self.rpn_sigma) * self.loc_loss_lambda
 		rpn_fg_loss = F.cross_entropy(rpn_scores, gt_rpn_labels, ignore_index=-1)
 		self.rpn_cm.add(rpn_scores[gt_rpn_labels > -1].detach(), gt_rpn_labels[gt_rpn_labels > -1].detach())
 
 		# RoI losses
 		n_smaple = roi_loc.size(0)
-		roi_loc = roi_loc.view(n_smaple, -1, 4)
-		roi_loc = roi_loc[torch.arange(n_smaple), gt_roi_label].contiguous()
-		roi_loc_loss = _loc_loss(roi_loc, gt_roi_loc, gt_roi_label, self.roi_sigma)
+		if self.rfcn.class_specific:
+			roi_loc = roi_loc.view(n_smaple, -1, 4)
+			roi_loc = roi_loc[torch.arange(n_smaple), gt_roi_label].contiguous()
+		roi_loc_loss = _loc_loss(roi_loc, gt_roi_loc, gt_roi_label, self.roi_sigma) * self.loc_loss_lambda
 		roi_cls_loss = F.cross_entropy(roi_score, gt_roi_label)
 		self.roi_cm.add(roi_score.cpu().detach().clone(), gt_roi_label.cpu())
 
 		total_loss = rpn_loc_loss + rpn_fg_loss + roi_loc_loss + roi_cls_loss
-		#total_loss = rpn_loc_loss + rpn_fg_loss
 		return {'rpn_loc_loss': rpn_loc_loss,
 				'rpn_fg_loss': rpn_fg_loss,
 				'roi_loc_loss': roi_loc_loss,

@@ -211,7 +211,7 @@ class BDD10K_dataset(Dataset):
 
         # horizontally flip
         img, params = self._random_flip(
-            img, x_random=False, return_param=True)
+            img, x_random=True, return_param=True)
         bbox = self._flip_bbox(
             bbox, (o_H, o_W), x_flip=params['x_flip'])
 

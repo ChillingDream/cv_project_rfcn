@@ -34,7 +34,7 @@ class RPN(nn.Module):
 
 		self.proposal_layer = ProposalLayer()
 
-	def forward(self, x, img_size, vis=False):
+	def forward(self, x, img_size):
 		"""
 		Args:
 			x: (N, C, H, W)
@@ -103,6 +103,8 @@ class ProposalLayer:
 		roi_w = rois[:, 2] - rois[:, 0]
 		roi_h = rois[:, 3] - rois[:, 1]
 		keep_index = torch.where((roi_h >= min_size) & (roi_w >= min_size))[0]
+		if len(keep_index) == 0:
+			keep_index = [0]
 		rois = rois[keep_index]
 		scores = scores[keep_index]
 
