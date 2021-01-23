@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from BDD10K_dataset import BDD10K_dataset
+from BDD100K_dataset import BDD100K_dataset
 from Pascal_VOC_dataset import Pascal_VOC_dataset
 from config import config
 from eval_voc_utils import eval_detection_voc
@@ -14,7 +14,11 @@ def evaluate(rfcn, dataloader, dataset, test_num=10000):
 	gt_bboxes, gt_labels, gt_difficults = [], [], []
 	if dataset == 'BDD':
 		gt_difficults = None
-	for i, (imgs, bboxes, labels, scale, difficults) in enumerate(tqdm(dataloader)):
+	for i, pack in enumerate(tqdm(dataloader)):
+		if len(pack) == 5:
+			imgs, bboxes, labels, scale, difficults = pack
+		else:
+			imgs, bboxes, labels, scale = pack
 		gt_bboxes += list(bboxes.numpy())
 		gt_labels += list(labels.numpy())
 		if dataset == 'VOC':
@@ -46,7 +50,7 @@ def get_dataloader(data_name='BDD'):
 	if data_name == 'VOC':
 		test_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_test'])
 	elif data_name == 'BDD':
-		test_dataset = BDD10K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd100k_small_test.pkl') # Remember to change the path!
+		test_dataset = BDD100K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd100k_small_test.pkl') # Remember to change the path!
 	test_loader = DataLoader(dataset=test_dataset, batch_size=config.batch_size, shuffle=False, num_workers=8, pin_memory=True)
 	return test_loader
 

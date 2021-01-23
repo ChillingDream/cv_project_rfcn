@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import torch
 
 class Config:
-	exp_name = 'BDD_100K_2'
+	exp_name = 'BDD_100K_3'
 	device = torch.device('cuda:0')
 	load_path = None
 	save_path = exp_name + '.pt'
