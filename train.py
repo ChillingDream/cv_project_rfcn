@@ -9,6 +9,7 @@ from trainer import Trainer
 from config import config
 from Pascal_VOC_dataset import Pascal_VOC_dataset
 from BDD10K_dataset import BDD10K_dataset
+from BDD100K_dataset import BDD100K_dataset
 from torch.utils.data import DataLoader
 from test import evaluate
 
@@ -63,8 +64,8 @@ def get_dataloader(data_name):
 		train_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_trainval']) # Remember to change the path!
 		val_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_test'])
 	elif data_name == 'BDD':
-		train_dataset = BDD10K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd100k_small_train.pkl') # Remember to change the path!
-		val_dataset = BDD10K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd100k_small_val.pkl') # Remember to change the path!
+		train_dataset = BDD100K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd100k_small_train2.pkl') # Remember to change the path!
+		val_dataset = BDD100K_dataset(load_from='/home/zkj/codes/cv_project_rfcn/bdd100k_small_val2.pkl') # Remember to change the path!
 	train_loader = DataLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=8)
 	val_loader = DataLoader(dataset=val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=8, pin_memory=True)
 	return train_loader, val_loader

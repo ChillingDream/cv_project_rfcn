@@ -15,7 +15,7 @@ from torchvision import transforms as tvtsf
 
 
 class BDD100K_dataset(Dataset):
-    def __init__(self, bdd100k_path=None, dataset_list=['train'], min_size=600, max_size=1000, max_objs=-1, dump_to=None, load_from=None):
+    def __init__(self, bdd100k_path=None, dataset_list=['train'], min_size=600, max_size=1000, max_objs=-1, dump_to=None, load_from=None, just_car=False):
 
         self._classes = ("bike",
                         "bus",
@@ -27,11 +27,17 @@ class BDD100K_dataset(Dataset):
                         "traffic sign",
                         "train",
                         "truck")
+        if just_car:
+            self._classes = ("bus",
+                            "car",
+                            "truck")
         self._num_classes = len(self._classes)
         self._class_to_ind = dict(zip(self._classes, range(self._num_classes)))
         self.min_size = min_size
         self.max_size = max_size
         self.max_objs = max_objs
+        self._load_from = load_from
+        self._dump_to = dump_to
 
         if load_from:
             print('loading data...')
@@ -206,11 +212,12 @@ class BDD100K_dataset(Dataset):
         img, bbox, scale = self._preprocess(img, self.min_size, self.max_size, bbox)
         _, o_H, o_W = img.shape
 
-        # horizontally flip
-        img, params = self._random_flip(
-            img, x_random=False, return_param=True)
-        bbox = self._flip_bbox(
-            bbox, (o_H, o_W), x_flip=params['x_flip'])
+        if not self._dump_to:
+            # horizontally flip
+            img, params = self._random_flip(
+                img, x_random=False, return_param=True)
+            bbox = self._flip_bbox(
+                bbox, (o_H, o_W), x_flip=params['x_flip'])
 
         return img, bbox, label, scale
 
@@ -243,4 +250,10 @@ class BDD100K_dataset(Dataset):
 
     def __getitem__(self, i):
         img, bbox, label, scale = self._dataset[i]
+        if not self._dump_to:
+            _, o_H, o_W = img.shape
+            img, params = self._random_flip(
+                img, x_random=False, return_param=True)
+            bbox = self._flip_bbox(
+                bbox, (o_H, o_W), x_flip=params['x_flip'])
         return img.copy(), bbox.copy(), label.astype(np.int64).copy(), scale

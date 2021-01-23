@@ -12,7 +12,7 @@ from torchvision import transforms as tvtsf
 
 
 class Pascal_VOC_dataset(Dataset):
-	def __init__(self, devkit_path, dataset_list=None, min_size=600, max_size=1000, use_diff=False, max_objs=5):
+	def __init__(self, devkit_path, dataset_list=None, min_size=600, max_size=1000, use_diff=False, max_objs=5, just_car=False):
 		self._devkit_path = devkit_path
 		self._data_paths = [os.path.join(self._devkit_path, 'VOC' + dataset.split('_')[0]) for dataset in dataset_list]
 		self.use_diff = use_diff
@@ -28,6 +28,8 @@ class Pascal_VOC_dataset(Dataset):
 						 'cow', 'diningtable', 'dog', 'horse',
 						 'motorbike', 'person', 'pottedplant',
 						 'sheep', 'sofa', 'train', 'tvmonitor')
+		if just_car:
+			self._classes = ('__background__', 'bus', 'car')
 		self._num_classes = len(self._classes)
 		self._class_to_ind = dict(zip(self._classes, range(self._num_classes)))
 		#self._class_to_ind = dict(zip(self._classes, [0]  * (len(self._classes))))
@@ -71,6 +73,8 @@ class Pascal_VOC_dataset(Dataset):
 			x2 = float(bbox.find('xmax').text) - 1
 			y2 = float(bbox.find('ymax').text) - 1
 
+			if obj.find('name').text.lower().strip() not in self._class_to_ind:
+				continue
 			cls = self._class_to_ind[obj.find('name').text.lower().strip()]
 			if not cls:
 				continue

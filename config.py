@@ -2,12 +2,12 @@ from argparse import ArgumentParser
 import torch
 
 class Config:
-	exp_name = 'rcnn_vgg'
+	exp_name = 'BDD_100K_2'
 	device = torch.device('cuda:0')
 	load_path = None
 	save_path = exp_name + '.pt'
 
-	dataset = 'VOC'
+	dataset = 'BDD'
 	num_classes = 21
 
 	rpn_sigma = 3.

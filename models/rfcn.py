@@ -203,7 +203,7 @@ class RCNNRoIhead(nn.Module):
 		self.classifier = classifier
 		self.cls = nn.Linear(mid_channels, num_classes)
 		self.loc = nn.Linear(mid_channels, num_classes * 4)
-		self.roi_pool = RoIPool((roi_size, roi_size), scale, -1)
+		self.roi_pool = RoIPool((roi_size, roi_size), scale)
 
 		nn.init.normal_(self.cls.weight, 0, 0.01)
 		nn.init.normal_(self.loc.weight, 0, 0.01)
