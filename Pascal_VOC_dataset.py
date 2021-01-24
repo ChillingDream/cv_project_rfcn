@@ -49,6 +49,8 @@ class Pascal_VOC_dataset(Dataset):
 		
 
 	def __len__(self):
+		if self._load_all:
+			return len(self._dataset)
 		return len(self.ids)
 
 	def _load_pascal_annotation(self, Annotations_file, min_box_size=32):
