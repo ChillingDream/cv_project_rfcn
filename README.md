@@ -45,7 +45,7 @@ This is for visualization on `localhost:8097`.
 ### Train Pascal VOC
 `python train.py VOC`
 #### Single category training
-Set parameter `just_car` to True when creating a `Pascal_VOC_dataset` or `BDD100K_dataset` object.
+Add argument `-j`  when running `BDD_100K_preprocessing.py` , `train.py` and `test.py`.
 
 ### Test
 `python test.py [VOC|BDD]`

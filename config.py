@@ -28,17 +28,20 @@ class Config:
 	val_dump_path = ''
 	bdd100k_path = ''
 
+	just_car = False 
 	def _parse(self):
 		parser = ArgumentParser()
 		parser.add_argument('dataset', choices=['VOC', 'BDD'])
 		parser.add_argument("-b", "--bdd100k_path", type=str, default='')
 		parser.add_argument("-t", "--train_dump_path", type=str, default='')
 		parser.add_argument("-v", "--val_dump_path", type=str, default='')
+		parser.add_argument("-j", "--just_car", action='store_true')
 		args = parser.parse_args()
 		self.dataset = args.dataset
 		self.train_dump_path = args.train_dump_path
 		self.val_dump_path = args.val_dump_path
 		self.bdd100k_path = args.bdd100k_path
+		self.just_car = args.just_car
 
 
 config = Config()

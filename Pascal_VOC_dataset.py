@@ -28,8 +28,11 @@ class Pascal_VOC_dataset(Dataset):
 						 'cow', 'diningtable', 'dog', 'horse',
 						 'motorbike', 'person', 'pottedplant',
 						 'sheep', 'sofa', 'train', 'tvmonitor')
+		self._load_all = False
 		if just_car:
 			self._classes = ('__background__', 'bus', 'car')
+			self._load_all = True
+			self._load_all_data()
 		self._num_classes = len(self._classes)
 		self._class_to_ind = dict(zip(self._classes, range(self._num_classes)))
 		#self._class_to_ind = dict(zip(self._classes, [0]  * (len(self._classes))))
@@ -218,15 +221,43 @@ class Pascal_VOC_dataset(Dataset):
 
 		return img, bbox, label, scale
 
-	def __getitem__(self, i):
-		anno = self._load_pascal_annotation(self.ids[i])
-		f = Image.open(self.images[i])
-		try:
-			img = f.convert('RGB')
-			img = np.asarray(img, dtype=np.float32)
-		finally:
-			if hasattr(f, 'close'):
-				f.close()
+	def _load_all_data(self):
+		self._dataset = []
+		for i in trange(len(self.ids)):
+			anno = self._load_pascal_annotation(self.ids[i])
+			if not anno:
+				continue
+			if not len(anno['boxes']):
+				continue
+			f = Image.open(self.images[i])
+			try:
+				img = f.convert('RGB')
+				img = np.asarray(img, dtype=np.float32)
+				img, bbox, scale = self._preprocess(
+					img, self.min_size, self.max_size, anno['boxes'],
+					flipped=anno['flipped']
+				)
+			finally:
+				if hasattr(f, 'close'):
+					f.close()
+			self._dataset.append((anno, img, scale))
 
-		img, bbox, label, scale = self._transform((img, anno['boxes'], anno['gt_classes']))
+	def __getitem__(self, i):
+		if self._load_all:
+			anno, img, scale = self._dataset[i]
+		else:
+			anno = self._load_pascal_annotation(self.ids[i])
+			f = Image.open(self.images[i])
+			try:
+				img = f.convert('RGB')
+				img = np.asarray(img, dtype=np.float32)
+			finally:
+				if hasattr(f, 'close'):
+					f.close()
+
+		# img, bbox, label, scale = self._transform((img, anno['boxes'], anno['gt_classes']))
+		if self._load_all:
+			img, bbox, label = self._transform((img, anno['boxes'], anno['gt_classes']))
+		else:
+			img, bbox, label, scale = self._transform((img, anno['boxes'], anno['gt_classes']))
 		return img.copy(), bbox.copy(), label.astype(np.int64).copy(), scale, anno['gt_ishard']

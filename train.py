@@ -60,15 +60,15 @@ def train(dataset='BDD'):
 def get_dataloader(data_name):
 	# raise NotImplementedError
 	if data_name == 'VOC':
-		train_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_trainval']) # Remember to change the path!
-		val_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_test'])
+		train_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_trainval'], just_car=config.just_car) # Remember to change the path!
+		val_dataset = Pascal_VOC_dataset(devkit_path = 'VOCdevkit', dataset_list = ['2007_test'], just_car=config.just_car)
 	elif data_name == 'BDD':
 		if config.train_dump_path:
 			train_dataset = BDD100K_dataset(load_from=config.train_dump_path) # Remember to change the path!
 			val_dataset = BDD100K_dataset(load_from=config.val_dump_path) # Remember to change the path!
 		else:
-			train_dataset = BDD100K_dataset(bdd100k_path=config.bdd100k_path, dataset_list=['train'])
-			val_dataset = BDD100K_dataset(bdd100k_path=config.bdd100k_path, dataset_list=['val'])
+			train_dataset = BDD100K_dataset(bdd100k_path=config.bdd100k_path, dataset_list=['train'], just_car=config.just_car)
+			val_dataset = BDD100K_dataset(bdd100k_path=config.bdd100k_path, dataset_list=['val'], just_car=config.just_car)
 	train_loader = DataLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=8)
 	val_loader = DataLoader(dataset=val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=8, pin_memory=True)
 	return train_loader, val_loader
