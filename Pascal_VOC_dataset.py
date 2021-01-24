@@ -217,9 +217,24 @@ class Pascal_VOC_dataset(Dataset):
 			return img
 
 	def _transform(self, in_data):
-		img, bbox, label = in_data
-		img, bbox, scale = self._preprocess(img, self.min_size, self.max_size, bbox)
-		_, o_H, o_W = img.shape
+		# img, bbox, label = in_data
+		# img, bbox, scale = self._preprocess(img, self.min_size, self.max_size, bbox)
+		# _, o_H, o_W = img.shape
+
+		# # horizontally flip
+		# img, params = self._random_flip(
+		# 	img, x_random=True, return_param=True)
+		# bbox = self._flip_bbox(
+		# 	bbox, (o_H, o_W), x_flip=params['x_flip'])
+
+		# return img, bbox, label, scale
+		if not self._load_all:
+			img, bbox, label = in_data
+			img, bbox, scale = self._preprocess(img, self.min_size, self.max_size)
+			_, o_H, o_W = img.shape
+		else:
+			img, bbox, label = in_data
+			_, o_H, o_W = img.shape
 
 		# horizontally flip
 		img, params = self._random_flip(
@@ -227,7 +242,10 @@ class Pascal_VOC_dataset(Dataset):
 		bbox = self._flip_bbox(
 			bbox, (o_H, o_W), x_flip=params['x_flip'])
 
-		return img, bbox, label, scale
+		if not self._load_all:
+			return img, bbox, label, scale
+		else:
+			return img, bbox, label
 
 	def _load_all_data(self):
 		self._dataset = []
