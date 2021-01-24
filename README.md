@@ -49,3 +49,9 @@ Add argument `-j`  when running `BDD_100K_preprocessing.py` , `train.py` and `te
 
 ### Test
 `python test.py [VOC|BDD]`
+
+### Memory requirement
+Pascal VOC >= 40G (with argument `-j`)
+Pascal VOC >= 16G (without argument `-j`)
+One fifth of BDD 100K >= 130G
+Full BDD 100K >= 500G 
