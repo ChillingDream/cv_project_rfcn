@@ -1,4 +1,4 @@
-# cv_project_rfcn
+# Vehicle detection based on Faster R-CNN
 ### Requrements
 * torch>=1.4.0
 * torchvision>=0.5.0
@@ -35,6 +35,11 @@ BDD 100K preprocessing process:
 2. rum `python train.py BDD -t {train_dump_path} -v {val_dump_path}`
 
 Preprocessing may take a few hours.
+
+### Setup Visdom server
+`python -m visdom.server &`
+
+This is for visualization on `localhost:8097`.
 
 ### Train Pascal VOC
 `python train.py VOC`

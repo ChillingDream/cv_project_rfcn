@@ -33,7 +33,7 @@ class Config:
 		parser.add_argument('dataset', choices=['VOC', 'BDD'])
 		parser.add_argument("-b", "--bdd100k_path", type=str, default='')
 		parser.add_argument("-t", "--train_dump_path", type=str, default='')
-		parser.add_argument("-b", "--val_dump_path", type=str, default='')
+		parser.add_argument("-v", "--val_dump_path", type=str, default='')
 		args = parser.parse_args()
 		self.dataset = args.dataset
 		self.train_dump_path = args.train_dump_path
