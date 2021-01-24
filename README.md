@@ -33,7 +33,7 @@ It is recommended to preprocess the data set before using the BDD100K dataset.
 
 BDD 100K preprocessing process:
 1. run `python BDD_100K_preprocessing.py -b {bdd100k_path} -t {train_dump_path} -v {val_dump_path}`
-2. rum `python train.py BDD -t {train_dump_path} -v {val_dump_path}`
+2. run `python train.py BDD -t {train_dump_path} -v {val_dump_path}`
 
 Preprocessing may take a few hours.
 
@@ -44,6 +44,8 @@ This is for visualization on `localhost:8097`.
 
 ### Train Pascal VOC
 `python train.py VOC`
+#### Single category training
+Set parameter `just_car` to True when creating a `Pascal_VOC_dataset` or `BDD100K_dataset` object.
 
 ### Test
 `python test.py [VOC|BDD]`
