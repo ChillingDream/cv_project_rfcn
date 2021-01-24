@@ -2,65 +2,65 @@ import torch
 import numpy as np
 
 
-def bbox2loc(bbox_P, bbox_G):
+def bbox2loc(bbox_a, bbox):
 	""" compute offsets and scales given target and source bounding boxes.
 
 	Args:
-		bbox_G: (R, 4) contains (x1, y1, x2, y2)
-		bbox_P: (R, 4) contains (x1, y1, x2, y2)
+		bbox: (R, 4) contains (x1, y1, x2, y2)
+		bbox_a: (R, 4) contains (x1, y1, x2, y2)
 
 	Returns:
 		(R, 4) contains (tx, ty, tw, th)
 	"""
-	assert bbox_G.size(1) == bbox_P.size(1) == 4 and bbox_G.size(0) == bbox_P.size(0)
+	assert bbox.size(1) == bbox_a.size(1) == 4 and bbox.size(0) == bbox_a.size(0)
 
-	Pw = bbox_P[:, 2] - bbox_P[:, 0]
-	Ph = bbox_P[:, 3] - bbox_P[:, 1]
-	ctr_Px = bbox_P[:, 0] + 0.5 * Pw
-	ctr_Py = bbox_P[:, 1] + 0.5 * Ph
+	w_a = bbox_a[:, 2] - bbox_a[:, 0]
+	h_a = bbox_a[:, 3] - bbox_a[:, 1]
+	ctr_x_a = bbox_a[:, 0] + 0.5 * w_a
+	ctr_y_a = bbox_a[:, 1] + 0.5 * h_a
 
-	Gw = bbox_G[:, 2] - bbox_G[:, 0]
-	Gh = bbox_G[:, 3] - bbox_G[:, 1]
-	ctr_Gx = bbox_G[:, 0] + 0.5 * Gw
-	ctr_Gy = bbox_G[:, 1] + 0.5 * Gh
+	w = bbox[:, 2] - bbox[:, 0]
+	h = bbox[:, 3] - bbox[:, 1]
+	ctr_x = bbox[:, 0] + 0.5 * w
+	ctr_y = bbox[:, 1] + 0.5 * h
 
-	tx = (ctr_Gx - ctr_Px) / Pw
-	ty = (ctr_Gy - ctr_Py) / Ph
-	th = torch.log(Gh / Ph)
-	tw = torch.log(Gw / Pw)
+	tx = (ctr_x - ctr_x_a) / w_a
+	ty = (ctr_y - ctr_y_a) / h_a
+	th = torch.log(h / h_a)
+	tw = torch.log(w / w_a)
 
 	return torch.stack([tx, ty, tw, th]).transpose(0, 1)
 
 
-def loc2bbox(bbox_P, loc):
+def loc2bbox(bbox_a, loc):
 	""" compute bounding boxes from offsets and scales
 
 	Args:
-		bbox_P: (R, 4) contains (x1, y1, x2, y2)
+		bbox_a: (R, 4) contains (x1, y1, x2, y2)
 		loc: (R, 4) contains (tx, ty, tw, th)
 
 	Returns:
 		(R, 4)
 	"""
-	assert bbox_P.size(1) == loc.size(1) == 4 and bbox_P.size(0) == loc.size(0)
+	assert bbox_a.size(1) == loc.size(1) == 4 and bbox_a.size(0) == loc.size(0)
 
-	Pw = bbox_P[:, 2] - bbox_P[:, 0]
-	Ph = bbox_P[:, 3] - bbox_P[:, 1]
-	ctr_Px = bbox_P[:, 0] + 0.5 * Pw
-	ctr_Py = bbox_P[:, 1] + 0.5 * Ph
+	w_a = bbox_a[:, 2] - bbox_a[:, 0]
+	h_a = bbox_a[:, 3] - bbox_a[:, 1]
+	ctr_x_a = bbox_a[:, 0] + 0.5 * w_a
+	ctr_y_a = bbox_a[:, 1] + 0.5 * h_a
 
-	Gw = Pw * torch.exp(loc[:, 2])
-	Gh = Ph * torch.exp(loc[:, 3])
-	ctr_Gx = Pw * loc[:, 0] + ctr_Px
-	ctr_Gy = Ph * loc[:, 1] + ctr_Py
+	w = w_a * torch.exp(loc[:, 2])
+	h = h_a * torch.exp(loc[:, 3])
+	ctr_x = w_a * loc[:, 0] + ctr_x_a
+	ctr_y = h_a * loc[:, 1] + ctr_y_a
 
-	bbox_G = torch.zeros_like(bbox_P)
-	bbox_G[:, 0] = ctr_Gx - 0.5 * Gw
-	bbox_G[:, 1] = ctr_Gy - 0.5 * Gh
-	bbox_G[:, 2] = ctr_Gx + 0.5 * Gw
-	bbox_G[:, 3] = ctr_Gy + 0.5 * Gh
+	bbox = torch.zeros_like(bbox_a)
+	bbox[:, 0] = ctr_x - 0.5 * w
+	bbox[:, 1] = ctr_y - 0.5 * h
+	bbox[:, 2] = ctr_x + 0.5 * w
+	bbox[:, 3] = ctr_y + 0.5 * h
 
-	return bbox_G
+	return bbox
 
 
 def calc_iou(bbox_a, bbox_b):

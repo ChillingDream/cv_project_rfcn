@@ -204,16 +204,24 @@ class RCNNRoIhead(nn.Module):
 		self.cls = nn.Linear(mid_channels, num_classes)
 		self.loc = nn.Linear(mid_channels, num_classes * 4)
 		self.roi_pool = RoIPool((roi_size, roi_size), scale)
+		self.scale = scale
 
 		nn.init.normal_(self.cls.weight, 0, 0.01)
 		nn.init.normal_(self.loc.weight, 0, 0.01)
 
-	def forward(self, h, rois, roi_indices):
+	def forward(self, feature, rois, roi_indices):
+		#rois = rois.clone().detach()
+		#rois[:, 2:] += 16
+		#rois[:, :2] -= 16
+		#rois[:, 0::2].clamp_(0, feature.size(3) / self.scale)
+		#rois[:, 1::2].clamp_(0, feature.size(2) / self.scale)
+
 		roi_indices = roi_indices.unsqueeze(1).float()
 		indices_and_rois = torch.cat([roi_indices, rois], 1).float()
-		h = self.roi_pool(h, indices_and_rois)
+		h = self.roi_pool(feature, indices_and_rois)
 		h = self.classifier(h)
 		roi_score = self.cls(h)
-		roi_locs = self.loc(h)
-		return roi_score, roi_locs
 
+		roi_locs = self.loc(h)
+
+		return roi_score, roi_locs

@@ -2,11 +2,10 @@ from argparse import ArgumentParser
 import torch
 
 class Config:
-	exp_name = 'BDD_100K_nms_0.15'
+	exp_name = 'BDD'
 	device = torch.device('cuda:0')
 	load_path = None
-	# save_path = exp_name + '.pt'
-	save_path = 'BDD_100K_3.pt'
+	save_path = exp_name + '.pt'
 
 	dataset = 'BDD'
 	num_classes = 21

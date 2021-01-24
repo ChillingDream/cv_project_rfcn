@@ -8,7 +8,6 @@ from models.rfcn import RFCN
 from trainer import Trainer
 from config import config
 from Pascal_VOC_dataset import Pascal_VOC_dataset
-from BDD10K_dataset import BDD10K_dataset
 from BDD100K_dataset import BDD100K_dataset
 from torch.utils.data import DataLoader
 from test import evaluate

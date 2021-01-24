@@ -6,17 +6,38 @@
 othres:
 
 `pip install -r requirements`
-### Prepare the dataset
+### Prepare data
+### VOC
+Download data
+```bash
+wget http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar
+wget http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtest_06-Nov-2007.tar
+wget http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar
+```
+Extract data
+```bash
+tar xvf VOCtrainval_06-Nov-2007.tar
+tar xvf VOCtest_06-Nov-2007.tar
+tar xvf VOCtrainval_11-May-2012.tar
+```
+Under project root directory, there should be a folder `VOCdevkit` which contains two folders `VOC2007` and `VOC2012`. If you fail to download from given urls, you download in other way and put organize them in that structure.
 
-Dataloader for BDD100K: BDD100K_dataset.py
+### BDD
 
-Dataloader for Pascal VOC: Pascal_VOC_dataset.py
+Data can be found on the Internet.
+
+### Prepare the BDD dataset
 
 It is recommended to preprocess the data set before using the BDD100K dataset. 
 
 BDD 100K preprocessing process:
 1. run `python BDD_100K_preprocessing.py -b {bdd100k_path} -t {train_dump_path} -v {val_dump_path}`
-2. rum `python train.py {dataset} -t {train_dump_path} -v {val_dump_path}`
+2. rum `python train.py BDD -t {train_dump_path} -v {val_dump_path}`
 
-### Train
-`python train.py {dataset}`
+Preprocessing may take a few hours.
+
+### Train Pascal VOC
+`python train.py VOC`
+
+### Test
+`python test.py [VOC|BDD]`
