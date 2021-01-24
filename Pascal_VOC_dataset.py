@@ -230,7 +230,7 @@ class Pascal_VOC_dataset(Dataset):
 		# return img, bbox, label, scale
 		if not self._load_all:
 			img, bbox, label = in_data
-			img, bbox, scale = self._preprocess(img, self.min_size, self.max_size)
+			img, bbox, scale = self._preprocess(img, self.min_size, self.max_size, bbox)
 			_, o_H, o_W = img.shape
 		else:
 			img, bbox, label = in_data
