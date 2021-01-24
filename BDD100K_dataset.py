@@ -28,8 +28,7 @@ class BDD100K_dataset(Dataset):
                         "train",
                         "truck")
         if just_car:
-            self._classes = ("bus",
-                            "car",
+            self._classes = ("car",
                             "truck")
         self._num_classes = len(self._classes)
         self._class_to_ind = dict(zip(self._classes, range(self._num_classes)))

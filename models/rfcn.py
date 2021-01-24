@@ -164,10 +164,10 @@ class RFCN(nn.Module):
 
 	def _set_threshold(self, mode):
 		if mode == 'eval':
-			self.nms_threshold = 0.3
+			self.nms_threshold = 0.15
 			self.score_threshold = 0.05
 		elif mode == 'vis':
-			self.nms_threshold = 0.3
+			self.nms_threshold = 0.15
 			self.score_threshold = 0.7
 		else:
 			raise ValueError('no such mode.')

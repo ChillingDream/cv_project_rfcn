@@ -2,10 +2,11 @@ from argparse import ArgumentParser
 import torch
 
 class Config:
-	exp_name = 'BDD_100K_3'
+	exp_name = 'BDD_100K_nms_0.15'
 	device = torch.device('cuda:0')
 	load_path = None
-	save_path = exp_name + '.pt'
+	# save_path = exp_name + '.pt'
+	save_path = 'BDD_100K_3.pt'
 
 	dataset = 'BDD'
 	num_classes = 21
@@ -24,11 +25,21 @@ class Config:
 
 	eval_iters = 100
 
+	train_dump_path = ''
+	val_dump_path = ''
+	bdd100k_path = ''
+
 	def _parse(self):
 		parser = ArgumentParser()
 		parser.add_argument('dataset', choices=['VOC', 'BDD'])
+		parser.add_argument("-b", "--bdd100k_path", type=str, default='')
+		parser.add_argument("-t", "--train_dump_path", type=str, default='')
+		parser.add_argument("-b", "--val_dump_path", type=str, default='')
 		args = parser.parse_args()
-		config.dataset = args.dataset
+		self.dataset = args.dataset
+		self.train_dump_path = args.train_dump_path
+		self.val_dump_path = args.val_dump_path
+		self.bdd100k_path = args.bdd100k_path
 
 
 config = Config()
