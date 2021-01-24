@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import torch
 from PIL import Image
+from tqdm import trange
 from skimage import transform as sktsf
 from torch.utils.data import Dataset
 from torchvision import transforms as tvtsf
@@ -28,19 +29,24 @@ class Pascal_VOC_dataset(Dataset):
 						 'cow', 'diningtable', 'dog', 'horse',
 						 'motorbike', 'person', 'pottedplant',
 						 'sheep', 'sofa', 'train', 'tvmonitor')
-		self._load_all = False
-		if just_car:
-			self._classes = ('__background__', 'bus', 'car')
-			self._load_all = True
-			self._load_all_data()
 		self._num_classes = len(self._classes)
 		self._class_to_ind = dict(zip(self._classes, range(self._num_classes)))
-		#self._class_to_ind = dict(zip(self._classes, [0]  * (len(self._classes))))
-		#self._class_to_ind['car'] = 1
-
 		self.min_size = min_size
 		self.max_size = max_size
 		self.max_objs = max_objs
+
+		self._load_all = False
+		if just_car:
+			self._classes = ('__background__', 'bus', 'car')
+			self._num_classes = len(self._classes)
+			self._class_to_ind = dict(zip(self._classes, range(self._num_classes)))
+			self._load_all = True
+			self._load_all_data()
+		
+		#self._class_to_ind = dict(zip(self._classes, [0]  * (len(self._classes))))
+		#self._class_to_ind['car'] = 1
+
+		
 
 	def __len__(self):
 		return len(self.ids)
@@ -235,7 +241,7 @@ class Pascal_VOC_dataset(Dataset):
 				img = np.asarray(img, dtype=np.float32)
 				img, bbox, scale = self._preprocess(
 					img, self.min_size, self.max_size, anno['boxes'],
-					flipped=anno['flipped']
+					flipped=False
 				)
 			finally:
 				if hasattr(f, 'close'):
